@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142 76% 36%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 210 11% 6%;
+    --foreground: 213 31% 91%;
+    --card: 210 11% 6%;
+    --card-foreground: 213 31% 91%;
+    --popover: 210 11% 6%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 195 100% 47%;
+    --primary-foreground: 210 11% 6%;
+    --secondary: 210 11% 15%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 210 11% 15%;
+    --muted-foreground: 210 11% 71%;
+    --accent: 195 100% 47%;
+    --accent-foreground: 210 11% 6%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 213 31% 91%;
+    --border: 210 11% 15%;
+    --input: 210 11% 15%;
+    --ring: 195 100% 47%;
+  }
+}
+
+.skype-gradient {
+  background: linear-gradient(135deg, hsl(var(--skype-blue)) 0%, hsl(var(--skype-dark-blue)) 100%);
+}
+
+.primary-gradient {
+  background: linear-gradient(135deg, #009a44 0%, #00b851 100%);
+}
+
+/* Remove input focus outlines */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-color: white;
+  }
+}
