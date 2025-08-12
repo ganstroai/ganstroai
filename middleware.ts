@@ -42,7 +42,7 @@ export function middleware(request: NextRequest) {
     const loggedUser: LoggedUser = JSON.parse(loggedUserCookie.value);
 
     // Check if user object exists and has required fields
-    if (!loggedUser.user || !loggedUser.user.id || !loggedUser.user.email) {
+    if (!loggedUser.user || !loggedUser.user._id || !loggedUser.user.email) {
       console.log("Invalid user object in loggedUser cookie");
       return NextResponse.redirect(new URL("/login", request.url));
     }
@@ -70,7 +70,7 @@ export function middleware(request: NextRequest) {
     // If we reach here, the user is authenticated and token is valid
     // Add user info to request headers for use in pages/components
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-user-id", loggedUser.user.id);
+    requestHeaders.set("x-user-id", loggedUser.user._id);
     requestHeaders.set("x-user-email", loggedUser.user.email);
     requestHeaders.set("x-user-token", loggedUser.token);
 

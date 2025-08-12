@@ -2,7 +2,7 @@ import React from "react";
 
 export interface LoggedUser {
   user: {
-    id: string;
+    _id: string;
     email: string;
   };
   token: string;

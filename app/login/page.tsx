@@ -32,7 +32,7 @@ import LoadingButton from "@/components/LoadingButton";
 import { LoginSchema } from "@/lib/schemas/AuthSchema";
 import { useMutation } from "@tanstack/react-query";
 import { post } from "@/lib/server";
-import { LOGIN_URL } from "@/lib/utils/constants";
+import { LOGIN_URL, routes } from "@/lib/utils/constants";
 import { useSetAtom } from "jotai";
 import { loggedUserAtom } from "@/lib/store";
 import { saveLoggedUser } from "@/lib/actions/auth";
@@ -100,15 +100,18 @@ export default function LoginPage() {
   const handleFormRequest = async (formData: LoginFormValues) => {
     const { email, password } = formData;
 
-    const { status, message, data } = await post({
+    const { status, message, data } = await post<any>({
       url: LOGIN_URL,
       payload: { email, password },
     });
     if (status) {
       await saveLoggedUser(data as LoggedUser);
       setLoggedUser(data as LoggedUser);
-      router.push("/");
-
+      if (data?.user?.role === "user") {
+        router.push("/");
+      } else {
+        router.push(routes.ADMIN);
+      }
       toast.success(message);
     } else {
       toast.error(message);
