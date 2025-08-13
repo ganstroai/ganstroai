@@ -120,4 +120,4 @@ const CustomPagination: React.FC<PaginationProps> = ({
   );
 };
 
-export default CustomPagination;
+export default React.memo(CustomPagination);

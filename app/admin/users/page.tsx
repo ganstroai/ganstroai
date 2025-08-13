@@ -27,9 +27,14 @@ import {
 } from "lucide-react";
 import { AdminLayout } from "@/components/admin-layout";
 import { toast } from "sonner";
-import { get } from "@/lib/server";
-import { ADMIN_USERS_URL, queryNames } from "@/lib/utils/constants";
-import { useQuery } from "@tanstack/react-query";
+import { destroy, get } from "@/lib/server";
+import { ADMIN_USERS_URL, queryNames, routes } from "@/lib/utils/constants";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import LoadingOverlay from "@/components/LoadingOverlay";
 import {
   Pagination,
@@ -42,24 +47,35 @@ import {
 } from "@/components/ui/pagination";
 import CustomPagination from "@/components/CustomPagination";
 import { format } from "date-fns";
+import DeleteConfirmationModal from "@/components/modals/DeleteConfirmationModal";
+import Link from "next/link";
 
 const limit = 10;
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>(
-    mockUsers.filter((u) => u.role === "user"),
-  );
-  const [filteredUsers, setFilteredUsers] = useState<User[]>(
-    mockUsers.filter((u) => u.role === "user"),
-  );
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
   >("all");
 
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState("");
+
+  const queryClient = useQueryClient();
+
   const [currentPage, setCurrentPage] = useState(1);
 
   const router = useRouter();
+
+  const handleOpenModal = (userId: string) => {
+    setOpenDeleteModal(true);
+    setDeleteUserId(userId);
+  };
+
+  const handleCloseModal = () => {
+    setOpenDeleteModal(false);
+    setDeleteUserId("");
+  };
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -68,35 +84,8 @@ export default function UsersPage() {
     }
   }, [router]);
 
-  useEffect(() => {
-    let filtered = users;
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (user) =>
-          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.name.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((user) =>
-        statusFilter === "active" ? user.isActive : !user.isActive,
-      );
-    }
-
-    setFilteredUsers(filtered);
-  }, [searchTerm, statusFilter, users]);
-
   const handleViewUser = (user: User) => {
     router.push(`/admin/users/view/${user.id}`);
-  };
-
-  const handleDeleteUser = (userId: string) => {
-    setUsers((prev) => prev.filter((user) => user.id !== userId));
-    toast("User deleted", {
-      description: "The user has been successfully deleted.",
-    });
   };
 
   const getStatusColor = (isActive: boolean) => {
@@ -140,10 +129,36 @@ export default function UsersPage() {
     queryKey: [queryNames.ADMIN_USERS, currentPage],
     queryFn: fetchUsers,
     refetchOnWindowFocus: false,
+    placeholderData: keepPreviousData,
   });
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleDeleteUserRequest = async () => {
+    const { status, message, data } = await destroy({
+      url: `${ADMIN_USERS_URL}/${deleteUserId}`,
+    });
+    if (status) {
+      queryClient.invalidateQueries({
+        queryKey: [queryNames.ADMIN_USERS],
+      });
+
+      handleCloseModal();
+      toast.success(message);
+    } else {
+      toast.error(message);
+    }
+  };
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: handleDeleteUserRequest,
+  });
+
+  const handleConfirmDelete = () => {
+    if (!deleteUserId) return;
+    mutate();
   };
 
   return (
@@ -175,12 +190,11 @@ export default function UsersPage() {
               </select>
             </div>
           </div>
-          <Button
-            onClick={() => router.push("/admin/users/add")}
-            className="flex items-center space-x-2"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Add User</span>
+          <Button className="flex items-center space-x-2" asChild>
+            <Link href={routes.ADMIN_USERS_ADD}>
+              <UserPlus className="h-4 w-4" />
+              <span>Add User</span>
+            </Link>
           </Button>
         </div>
 
@@ -258,28 +272,24 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
-                      <Button
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleViewUser(user)}
                       >
                         <Eye className="mr-1 h-3 w-3" />
                         View
+                      </Button> */}
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`${routes.ADMIN_USERS_EDIT}/${user?._id}`}>
+                          <Edit className="mr-1 h-3 w-3" />
+                          Edit
+                        </Link>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          router.push(`/admin/users/edit/${user?._id}`)
-                        }
-                      >
-                        <Edit className="mr-1 h-3 w-3" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user?._id)}
+                        onClick={() => handleOpenModal(user?._id)}
                         className="text-red-600 hover:bg-red-50 hover:text-red-700"
                       >
                         <Trash2 className="mr-1 h-3 w-3" />
@@ -310,6 +320,13 @@ export default function UsersPage() {
           handlePageChange={(page) => handlePageChange(page)}
         />
       </div>
+
+      <DeleteConfirmationModal
+        open={openDeleteModal}
+        handleClose={handleCloseModal}
+        handleDelete={handleConfirmDelete}
+        isLoading={isPending}
+      />
     </>
   );
 }

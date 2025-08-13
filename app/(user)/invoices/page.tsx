@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { api } from "@/lib/api";
 import { UserLayout } from "@/components/user-layout";
-import { FloatingChat } from "@/components/floating-chat";
+
 import { Download, Receipt, Volume2 } from "lucide-react";
 import { UserInvoiceSummary } from "@/components/user-invoice-summary";
 import { useState } from "react";
@@ -148,7 +148,6 @@ export default function InvoicesPage() {
         </Card>
       </div>
 
-      <FloatingChat />
       {/* </UserLayout> */}
     </>
   );

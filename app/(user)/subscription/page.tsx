@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { UserLayout } from "@/components/user-layout";
-import { FloatingChat } from "@/components/floating-chat";
+
 import { CreditCard, Calendar, CheckCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -182,7 +182,6 @@ export default function SubscriptionPage() {
         </Card>
       </div>
 
-      <FloatingChat />
       {/* </UserLayout> */}
     </>
   );

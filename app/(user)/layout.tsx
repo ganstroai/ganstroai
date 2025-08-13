@@ -3,6 +3,7 @@ import React from "react";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
+import { FloatingChat } from "@/components/floating-chat";
 
 interface Props {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ const UserLayout: React.FC<Props> = ({ children }) => {
           <Footer />
         </div>
       </div>
+      <FloatingChat />
     </>
   );
 };

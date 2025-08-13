@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
 import { UserLayout } from "@/components/user-layout";
-import { FloatingChat } from "@/components/floating-chat";
+
 import { CreditCard, Calendar, TrendingUp, MessageCircle } from "lucide-react";
 import { UserInvoiceSummary } from "@/components/user-invoice-summary";
 import { routes } from "@/lib/utils/constants";
@@ -172,7 +172,6 @@ export default function UserDashboard() {
         </Card>
       </div>
 
-      <FloatingChat />
       {/* </UserLayout> */}
     </>
   );

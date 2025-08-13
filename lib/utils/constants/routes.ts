@@ -14,6 +14,8 @@ export const routes = {
   ADMIN_DASHBOARD: "/admin/dashboard",
   ADMIN_VOICE_NOTES: "/admin/voice-notes",
   ADMIN_USERS: "/admin/users",
+  ADMIN_USERS_ADD: "/admin/users/add",
+  ADMIN_USERS_EDIT: "/admin/users/edit",
   ADMIN_SETTINGS: "/admin/settings",
   ADMIN_PROFILE: "/admin/profile",
 };

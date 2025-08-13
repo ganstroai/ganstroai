@@ -9,6 +9,8 @@ const RESET_PASSWORD = "reset-password";
 const TEMPLATES = "templates";
 export const CREATE = "create";
 const USERS = "users";
+const VOICE = "voice";
+const UPLOAD = "upload";
 
 export const SIGN_UP_URL = `${API_BASE_URL}/${AUTH}/${SIGN_UP}`;
 export const LOGIN_URL = `${API_BASE_URL}/${AUTH}/${LOGIN}`;
@@ -18,3 +20,5 @@ export const RESET_PASSWORD_URL = `${API_BASE_URL}/${AUTH}/${RESET_PASSWORD}`;
 export const TEMPLATES_URL = `${API_BASE_URL}/${TEMPLATES}`;
 
 export const ADMIN_USERS_URL = `${API_BASE_URL}/${USERS}`;
+
+export const UPLOAD_VOICE_URL = `${API_BASE_URL}/${VOICE}/${UPLOAD}`;

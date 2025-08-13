@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,41 +14,40 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { api } from "@/lib/api";
-import { UserLayout } from "@/components/user-layout";
-import { FloatingChat } from "@/components/floating-chat";
+
 import { User, Mail, Calendar, Save, Settings } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { loggedUserAtom } from "@/lib/store";
+import { useAtom } from "jotai";
+import type { LoggedUser } from "@/lib/utils/constants/types";
+import { ProfileUpdateSchema } from "@/lib/schemas/AuthSchema";
+import { format } from "date-fns";
 
-const profileSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-});
-
-type ProfileForm = z.infer<typeof profileSchema>;
+type ProfileForm = z.infer<typeof ProfileUpdateSchema>;
 
 export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
+  const [loggedUser, setLoggedUser] = useAtom(loggedUserAtom);
+
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const { data: user, isLoading } = useQuery({
-    queryKey: ["currentUser"],
-    queryFn: api.getCurrentUser,
-  });
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-  } = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
+  const form = useForm<ProfileForm>({
+    resolver: zodResolver(ProfileUpdateSchema),
     defaultValues: {
-      name: user?.name || "",
-      email: user?.email || "",
+      firstName: loggedUser?.user?.firstName || "",
+      lastName: loggedUser?.user?.lastName || "",
+      email: loggedUser?.user?.email || "",
     },
   });
 
@@ -74,24 +73,34 @@ export default function ProfilePage() {
 
   const handleEdit = () => {
     setIsEditing(true);
-    reset({
-      name: user?.name || "",
-      email: user?.email || "",
-    });
+    // form.reset({
+    //   name: user?.name || "",
+    //   email: user?.email || "",
+    // });
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    reset();
+    form.reset();
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        Loading...
-      </div>
-    );
-  }
+  // if (isLoading) {
+  //   return (
+  //     <div className="flex min-h-screen items-center justify-center">
+  //       Loading...
+  //     </div>
+  //   );
+  // }
+
+  useEffect(() => {
+    if (loggedUser) {
+      form.reset({
+        firstName: loggedUser?.user?.firstName || "",
+        lastName: loggedUser?.user?.lastName || "",
+        email: loggedUser?.user?.email || "",
+      });
+    }
+  }, [loggedUser?.user?._id]);
 
   return (
     <>
@@ -109,88 +118,89 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-sm font-medium">
-                    Full Name
-                  </Label>
-                  {isEditing ? (
-                    <>
-                      <Input
-                        id="name"
-                        placeholder="Enter your full name"
-                        className="border-2 border-gray-200 focus:border-primary"
-                        {...register("name")}
-                      />
-                      {errors.name && (
-                        <p className="text-sm text-red-600">
-                          {errors.name.message}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <div className="rounded-md border bg-gray-50 p-3">
-                      {user?.name || "Not provided"}
-                    </div>
-                  )}
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="firstName"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-sm font-semibold">
+                          First Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            id="firstName"
+                            type="text"
+                            placeholder="Enter your first name"
+                            className="h-10 border-2 border-gray-200 focus:border-primary lg:h-12"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="lastName"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-sm font-semibold">
+                          Last Name
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            id="lastName"
+                            type="text"
+                            placeholder="Enter your last name"
+                            className="h-10 border-2 border-gray-200 focus:border-primary lg:h-12"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem className="space-y-2">
+                        <FormLabel className="text-sm font-semibold">
+                          Email Address
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="Enter your email"
+                            className="h-10 border-2 border-gray-200 focus:border-primary lg:h-12"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">
-                    Email Address
-                  </Label>
-                  {isEditing ? (
-                    <>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email"
-                        className="border-2 border-gray-200 focus:border-primary"
-                        {...register("email")}
-                      />
-                      {errors.email && (
-                        <p className="text-sm text-red-600">
-                          {errors.email.message}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <div className="rounded-md border bg-gray-50 p-3">
-                      {user?.email}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4 border-t pt-4">
-                {isEditing ? (
-                  <>
-                    <Button
-                      type="submit"
-                      className="bg-primary hover:bg-primary/90"
-                      disabled={updateProfileMutation.isPending}
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      {updateProfileMutation.isPending
-                        ? "Saving..."
-                        : "Save Changes"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleCancel}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <Button type="button" onClick={handleEdit}>
+                <div className="flex items-center space-x-4 border-t pt-4">
+                  <Button
+                    disabled={true}
+                    type="submit"
+                    className="min-w-[103px] bg-primary hover:bg-primary/90"
+                  >
                     Edit Profile
                   </Button>
-                )}
-              </div>
-            </form>
+                </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
 
@@ -211,18 +221,17 @@ export default function ProfilePage() {
                 <div>
                   <p className="text-sm text-gray-600">Member Since</p>
                   <p className="font-medium">
-                    {user?.createdAt
-                      ? new Date(user.createdAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })
+                    {loggedUser?.user?.createdAt
+                      ? format(
+                          new Date(loggedUser.user.createdAt),
+                          "MMMM d, yyyy",
+                        )
                       : "N/A"}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-3">
+              {/* <div className="flex items-center space-x-3">
                 <div className="rounded-full bg-green-100 p-2">
                   <User className="h-5 w-5 text-green-600" />
                 </div>
@@ -231,7 +240,7 @@ export default function ProfilePage() {
                   <p className="font-medium text-green-600">
                     {user?.isActive ? "Active" : "Inactive"}
                   </p>
-                </div>
+                </div> 
               </div>
 
               <div className="flex items-center space-x-3">
@@ -246,7 +255,7 @@ export default function ProfilePage() {
                       : "N/A"}
                   </p>
                 </div>
-              </div>
+              </div> */}
 
               <div className="flex items-center space-x-3">
                 <div className="rounded-full bg-orange-100 p-2">
@@ -254,7 +263,9 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Account Type</p>
-                  <p className="font-medium capitalize">{user?.role}</p>
+                  <p className="font-medium capitalize">
+                    {loggedUser?.user?.role}
+                  </p>
                 </div>
               </div>
             </div>
@@ -290,7 +301,6 @@ export default function ProfilePage() {
         </Card>
       </div>
 
-      <FloatingChat />
       {/* </UserLayout> */}
     </>
   );

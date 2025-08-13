@@ -9,7 +9,7 @@ const SettingsPage = () => {
         description="Manage your account settings and preferences"
       > */}
       <UserSettings />
-      <FloatingChat />
+
       {/* </UserLayout> */}
     </>
   );

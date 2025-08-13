@@ -8,9 +8,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   MessageCircle,
   Mic,
@@ -20,12 +17,7 @@ import {
   Pause,
   Trash2,
   Loader2,
-  X,
-  Check,
 } from "lucide-react";
-import { UPLOAD_VOICE_URL } from "@/lib/utils/constants";
-import { post } from "@/lib/server";
-import { toast } from "sonner";
 
 interface VoiceMessage {
   id: string;
@@ -39,15 +31,6 @@ interface TextMessage {
   id: string;
   text: string;
   type: "user" | "ai";
-}
-
-interface ExtractedData {
-  clientName: string;
-  address: string;
-  date: string;
-  service: string;
-  cost: string;
-  vendorAddress: string;
 }
 
 type Message = VoiceMessage | TextMessage;
@@ -64,10 +47,6 @@ export function FloatingChat() {
   } | null>(null);
   const [playingAudio, setPlayingAudio] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [extractedData, setExtractedData] = useState<ExtractedData | null>(
-    null,
-  );
-  const [showDataForm, setShowDataForm] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -155,17 +134,27 @@ export function FloatingChat() {
       type: audioBlob.type || "audio/wav",
     });
 
+    // Add the audio file to formData with the key 'voiceNote'
     formData.append("voiceNote", audioFile);
 
-    const { status, message, data } = await post<any>({
-      url: UPLOAD_VOICE_URL,
-      payload: formData,
-    });
+    try {
+      const response = await fetch("{{local_url}}voice/upload", {
+        method: "POST",
+        body: formData,
+        // Note: Don't set Content-Type header - browser will set it with boundary for multipart/form-data
+      });
 
-    if (status) {
+      if (!response.ok) {
+        throw new Error(
+          `Upload failed: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = await response.json();
       return data;
-    } else {
-      console.log("here in else");
+    } catch (error) {
+      console.error("Error uploading voice message:", error);
+      throw error;
     }
   };
 
@@ -175,7 +164,7 @@ export function FloatingChat() {
     setIsUploading(true);
 
     try {
-      // Add the voice message to the UI immediately with the saved duration
+      // Add the voice message to the UI immediately
       const newMessage: VoiceMessage = {
         id: Date.now().toString(),
         audioBlob: pendingAudio.blob,
@@ -189,104 +178,39 @@ export function FloatingChat() {
       // Upload to server
       const uploadResponse = await uploadVoiceToServer(pendingAudio.blob);
 
-      // Clear pending audio and reset recording time after message is sent
+      // Clear pending audio
       setPendingAudio(null);
       setRecordingTime(0);
 
-      // Handle server response
+      // Handle server response - adjust based on your API response structure
       if (uploadResponse) {
-        // Check if it's a success response with extracted data
-        if (uploadResponse.success && uploadResponse.data) {
-          // Set the extracted data and show the form
-          setExtractedData(uploadResponse.data);
-          setShowDataForm(true);
-
-          // Add a success message
-          const successMessage: TextMessage = {
-            id: (Date.now() + 1).toString(),
-            text: `Voice message processed successfully! Please review the extracted information. ${JSON.stringify(uploadResponse.data)}`,
-            type: "ai",
-          };
-          setMessages((prev) => [...prev, successMessage]);
-        } else if (uploadResponse.status === "error") {
-          // Handle error case
-          let errorText = "Error processing voice message.";
-          if (uploadResponse.missing) {
-            errorText = `Missing required fields: ${uploadResponse.missing.join(", ")}`;
-            toast.error(errorText);
-          } else if (uploadResponse.error) {
-            errorText = uploadResponse.error;
-            toast.error(errorText);
-          }
-
-          const errorMessage: TextMessage = {
-            id: (Date.now() + 1).toString(),
-            text: errorText,
-            type: "ai",
-          };
-          setMessages((prev) => [...prev, errorMessage]);
-        } else {
-          // Generic success without data
-          const aiResponse: TextMessage = {
-            id: (Date.now() + 1).toString(),
-            text: "Voice message received successfully!",
-            type: "ai",
-          };
-          setMessages((prev) => [...prev, aiResponse]);
-        }
+        // If your API returns a text response or transcription
+        const aiResponse: TextMessage = {
+          id: (Date.now() + 1).toString(),
+          text:
+            uploadResponse.message ||
+            uploadResponse.transcription ||
+            "Voice message received successfully!",
+          type: "ai",
+        };
+        setMessages((prev) => [...prev, aiResponse]);
       }
-    } catch (error: any) {
+    } catch (error) {
       // Handle error - show error message
       console.error("Failed to send voice message:", error);
 
-      // Show toast for the error
-      toast.error(error.message || "Failed to process voice message");
-
       const errorMessage: TextMessage = {
         id: (Date.now() + 1).toString(),
-        text:
-          error.message ||
-          "Sorry, there was an error processing your voice message. Please try again.",
+        text: "Sorry, there was an error processing your voice message. Please try again.",
         type: "ai",
       };
       setMessages((prev) => [...prev, errorMessage]);
+
+      // Optionally, you might want to restore the pending audio so user can retry
+      // setPendingAudio(pendingAudio);
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const handleDataFormSubmit = () => {
-    if (!extractedData) return;
-
-    // Here you can do something with the confirmed data
-    // For example, send it to another endpoint or save it locally
-    console.log("Confirmed data:", extractedData);
-
-    // Add confirmation message
-    const confirmMessage: TextMessage = {
-      id: Date.now().toString(),
-      text: `Data confirmed! Client: ${extractedData.clientName}, Service: ${extractedData.service}, Cost: ${extractedData.cost}`,
-      type: "ai",
-    };
-    setMessages((prev) => [...prev, confirmMessage]);
-
-    // Close the form
-    setShowDataForm(false);
-    setExtractedData(null);
-
-    toast.success("Data saved successfully!");
-  };
-
-  const handleDataFormCancel = () => {
-    setShowDataForm(false);
-    setExtractedData(null);
-
-    const cancelMessage: TextMessage = {
-      id: Date.now().toString(),
-      text: "Data entry cancelled.",
-      type: "ai",
-    };
-    setMessages((prev) => [...prev, cancelMessage]);
   };
 
   const discardVoiceMessage = () => {
@@ -403,7 +327,7 @@ export function FloatingChat() {
       }`}
     >
       <div
-        className={`max-w-xs break-words rounded-lg px-4 py-2 ${
+        className={`max-w-xs rounded-lg px-4 py-2 ${
           message.type === "user"
             ? "bg-primary text-white"
             : "bg-gray-100 text-gray-900"
@@ -456,143 +380,6 @@ export function FloatingChat() {
               ))
             )}
           </div>
-
-          {/* Data Form - Shows when extracted data is available */}
-          {showDataForm && extractedData && (
-            <div className="border-b border-t bg-gray-50 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Extracted Information</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleDataFormCancel}
-                  className="h-6 w-6 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="clientName" className="text-xs">
-                      Client Name
-                    </Label>
-                    <Input
-                      id="clientName"
-                      value={extractedData.clientName}
-                      onChange={(e) =>
-                        setExtractedData({
-                          ...extractedData,
-                          clientName: e.target.value,
-                        })
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="service" className="text-xs">
-                      Service
-                    </Label>
-                    <Input
-                      id="service"
-                      value={extractedData.service}
-                      onChange={(e) =>
-                        setExtractedData({
-                          ...extractedData,
-                          service: e.target.value,
-                        })
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="cost" className="text-xs">
-                      Cost
-                    </Label>
-                    <Input
-                      id="cost"
-                      value={extractedData.cost}
-                      onChange={(e) =>
-                        setExtractedData({
-                          ...extractedData,
-                          cost: e.target.value,
-                        })
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="date" className="text-xs">
-                      Date
-                    </Label>
-                    <Input
-                      id="date"
-                      type="date"
-                      value={extractedData.date}
-                      onChange={(e) =>
-                        setExtractedData({
-                          ...extractedData,
-                          date: e.target.value,
-                        })
-                      }
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label htmlFor="address" className="text-xs">
-                    Client Address
-                  </Label>
-                  <Input
-                    id="address"
-                    value={extractedData.address}
-                    onChange={(e) =>
-                      setExtractedData({
-                        ...extractedData,
-                        address: e.target.value,
-                      })
-                    }
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="vendorAddress" className="text-xs">
-                    Vendor Address
-                  </Label>
-                  <Input
-                    id="vendorAddress"
-                    value={extractedData.vendorAddress}
-                    onChange={(e) =>
-                      setExtractedData({
-                        ...extractedData,
-                        vendorAddress: e.target.value,
-                      })
-                    }
-                    className="h-8 text-sm"
-                  />
-                </div>
-                <div className="flex justify-end space-x-2 pt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDataFormCancel}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleDataFormSubmit}
-                    className="bg-primary hover:bg-primary/90"
-                  >
-                    <Check className="mr-1 h-3 w-3" />
-                    Confirm
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Voice Recording Interface */}
           <div className="border-t p-4">
@@ -682,7 +469,6 @@ export function FloatingChat() {
                         : "bg-primary hover:bg-primary/90"
                     }`}
                     size="icon"
-                    disabled={showDataForm}
                   >
                     {isRecording ? (
                       <MicOff className="h-6 w-6 text-white" />
@@ -702,9 +488,7 @@ export function FloatingChat() {
                 <p className="text-center text-xs text-gray-500">
                   {isRecording
                     ? "Tap to stop recording"
-                    : showDataForm
-                      ? "Complete the form above first"
-                      : "Tap to start voice recording"}
+                    : "Tap to start voice recording"}
                 </p>
               </div>
             )}
